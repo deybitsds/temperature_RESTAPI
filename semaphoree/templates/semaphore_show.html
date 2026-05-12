@@ -85,6 +85,8 @@
     </style>
 </head>
 <body>
+    <a href="/temperature/api/show/" style="position:fixed;top:1.5rem;left:1.5rem;background:var(--card);color:var(--text);padding:0.6rem 1.2rem;border:1px solid var(--border);border-radius:8px;text-decoration:none;font-size:0.85rem;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--muted)'" onmouseout="this.style.borderColor='var(--border)'">← Temperatura</a>
+
     <h1>Semáforo LED</h1>
     <div class="semaphore">
         <div class="light {% if state.red %}on-red{% endif %}"></div>

@@ -3,397 +3,956 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor de Temperatura y Humedad</title>
+    <title>Monitor Ambiental</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --bg: #0f0f1a;
-            --card-bg: #1a1a2e;
-            --card-border: #2a2a4a;
-            --text: #e0e0f0;
-            --text-muted: #8888aa;
-            --accent: #00d4aa;
-            --accent-glow: rgba(0, 212, 170, 0.15);
-            --warm: #ff6b35;
-            --cool: #35b0ff;
-            --danger: #ff4757;
+            --bg:          #f3f1ed;
+            --surface:     #ffffff;
+            --surface-2:   #f0eee9;
+            --border:      rgba(0,0,0,0.07);
+            --border-hi:   rgba(0,0,0,0.18);
+
+            --text:        #1a1a1a;
+            --text-muted:  #7c7a76;
+            --text-dim:    #a8a4a0;
+
+            --teal:        #0d9488;
+            --teal-glow:   rgba(13,148,136,0.10);
+            --teal-dim:    rgba(13,148,136,0.06);
+
+            --orange:      #c2410c;
+            --orange-dim:  rgba(194,65,12,0.10);
+
+            --blue:        #0369a1;
+            --blue-dim:    rgba(3,105,161,0.10);
+
+            --amber:       #b45309;
+            --amber-dim:   rgba(180,83,9,0.10);
+
+            --danger:      #be123c;
         }
 
+        html { scroll-behavior: smooth; }
+
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-family: 'Outfit', sans-serif;
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
-            padding: 2rem;
+            padding: 2.5rem 1.5rem 4rem;
+            line-height: 1.5;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        /* ─── HEADER ─── */
+        .site-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 3rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
         }
 
-        h1 {
-            text-align: center;
-            font-size: 2rem;
-            font-weight: 300;
-            letter-spacing: 0.05em;
-            margin-bottom: 2rem;
-            color: var(--accent);
-            text-shadow: 0 0 30px var(--accent-glow);
+        .site-title {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
         }
 
-        .latest-card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 1.5rem;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-        }
-
-        .latest-item {
-            text-align: center;
-            padding: 1rem;
-        }
-
-        .latest-item .label {
-            font-size: 0.8rem;
+        .site-title .eyebrow {
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.15em;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
-            margin-bottom: 0.5rem;
+            color: var(--teal);
         }
 
-        .latest-item .value {
-            font-size: 2.2rem;
-            font-weight: 700;
+        .site-title h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--text);
         }
 
-        .latest-item .value.temp { color: var(--warm); }
-        .latest-item .value.hum { color: var(--cool); }
-        .latest-item .value.heat { color: #ff9f43; }
-        .latest-item .value.time { color: var(--accent); font-size: 1.4rem; }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
 
-        /* Stats row */
-        .stats-grid {
+        .btn-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--teal-glow);
+            color: var(--teal);
+            border: 1px solid rgba(13,148,136,0.25);
+            border-radius: 100px;
+            padding: 0.5rem 1.1rem;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            letter-spacing: 0.01em;
+        }
+
+        .btn-pill:hover {
+            background: rgba(13,148,136,0.18);
+            border-color: rgba(13,148,136,0.45);
+        }
+
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--teal);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: 0.35; transform: scale(0.75); }
+        }
+
+        /* ─── LATEST READINGS ─── */
+        .readings-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .reading-card {
+            background: var(--surface);
+            padding: 1.5rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .reading-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+        }
+
+        .reading-card.temp::before  { background: var(--orange); }
+        .reading-card.hum::before   { background: var(--blue); }
+        .reading-card.heat::before  { background: var(--amber); }
+        .reading-card.time::before  { background: var(--teal); }
+
+        .reading-card .r-label {
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .reading-card .r-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 500;
+            letter-spacing: -0.03em;
+            line-height: 1;
+        }
+
+        .reading-card.temp  .r-value { color: var(--orange); }
+        .reading-card.hum   .r-value { color: var(--blue); }
+        .reading-card.heat  .r-value { color: var(--amber); font-size:1.6rem; }
+        .reading-card.time  .r-value { color: var(--teal); font-size: 1.15rem; letter-spacing: 0; }
+
+        .reading-card .r-unit {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* ─── STATS ─── */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
             gap: 1rem;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }
 
         .stat-card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
+            background: var(--surface);
+            border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 1.2rem 1.5rem;
+            padding: 1.1rem 1.25rem;
         }
 
-        .stat-card .stat-title {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--text-muted);
-            margin-bottom: 0.75rem;
-        }
-
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 1rem;
-        }
-
-        .stat-box {
-            text-align: center;
-            flex: 1;
-        }
-
-        .stat-box .stat-label {
+        .stat-card-title {
             font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
             color: var(--text-muted);
+            margin-bottom: 0.9rem;
+        }
+
+        .stat-inner {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            text-align: center;
+        }
+
+        .stat-item .s-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-dim);
             display: block;
-            margin-bottom: 0.25rem;
+            margin-bottom: 4px;
         }
 
-        .stat-box .stat-value {
-            font-size: 1.2rem;
-            font-weight: 600;
+        .stat-item .s-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.05rem;
+            font-weight: 500;
         }
 
-        .stat-box .stat-value.min { color: var(--cool); }
-        .stat-box .stat-value.max { color: var(--warm); }
-        .stat-box .stat-value.avg { color: var(--accent); }
+        .s-val.min  { color: var(--blue); }
+        .s-val.avg  { color: var(--teal); }
+        .s-val.max  { color: var(--orange); }
 
-        /* Filter */
-        .filter-bar {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            padding: 1.2rem 1.5rem;
-            margin-bottom: 2rem;
+        .stat-bar-track {
+            height: 3px;
+            background: var(--border);
+            border-radius: 2px;
+            margin: 0.6rem 0 0;
+            position: relative;
+        }
+
+        .stat-bar-fill {
+            position: absolute;
+            left: 0; top: 0;
+            height: 100%;
+            border-radius: 2px;
+        }
+
+        .stat-bar-fill.t { background: linear-gradient(90deg, var(--blue), var(--orange)); }
+        .stat-bar-fill.h { background: linear-gradient(90deg, var(--teal), var(--blue)); }
+        .stat-bar-fill.hi { background: linear-gradient(90deg, var(--teal), var(--amber)); }
+
+        /* ─── CHART ─── */
+        .chart-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem 1.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-header {
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+        }
+
+        .chart-header .ch-title {
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .chart-legend {
+            display: flex;
             gap: 1rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .chart-canvas-wrap {
+            position: relative;
+            height: 260px;
+        }
+
+        /* ─── FILTER BAR ─── */
+        .filter-bar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.9rem 1.25rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
             flex-wrap: wrap;
         }
 
         .filter-bar label {
+            font-size: 0.8rem;
             color: var(--text-muted);
-            font-size: 0.9rem;
         }
 
         .filter-bar select {
-            background: #252545;
+            background: var(--surface-2);
             color: var(--text);
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--border-hi);
             border-radius: 8px;
-            padding: 0.6rem 1rem;
-            font-size: 0.9rem;
+            padding: 0.45rem 0.9rem;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.82rem;
             cursor: pointer;
             outline: none;
             transition: border-color 0.2s;
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237c7a76' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 2rem;
         }
 
-        .filter-bar select:focus {
-            border-color: var(--accent);
-        }
+        .filter-bar select:focus { border-color: var(--teal); }
 
-        .filter-bar .btn {
-            background: var(--accent);
-            color: #0f0f1a;
+        .filter-bar .btn-filter {
+            background: var(--teal);
+            color: #ffffff;
             border: none;
             border-radius: 8px;
-            padding: 0.6rem 1.5rem;
+            padding: 0.45rem 1.1rem;
+            font-family: 'Outfit', sans-serif;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.82rem;
             cursor: pointer;
             transition: all 0.2s;
         }
 
-        .filter-bar .btn:hover {
-            box-shadow: 0 0 20px var(--accent-glow);
-            transform: translateY(-1px);
-        }
+        .filter-bar .btn-filter:hover { opacity: 0.85; }
 
         .filter-bar .btn-clear {
             background: transparent;
             color: var(--text-muted);
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--border-hi);
             border-radius: 8px;
-            padding: 0.6rem 1.2rem;
-            font-size: 0.9rem;
+            padding: 0.45rem 1rem;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.82rem;
             cursor: pointer;
             text-decoration: none;
             transition: all 0.2s;
         }
 
         .filter-bar .btn-clear:hover {
-            border-color: var(--text-muted);
+            border-color: rgba(0,0,0,0.25);
             color: var(--text);
         }
 
-        .filter-bar .count-badge {
+        .count-badge {
             margin-left: auto;
-            background: var(--accent-glow);
-            color: var(--accent);
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
+            background: var(--teal-dim);
+            color: var(--teal);
+            border: 1px solid rgba(13,148,136,0.15);
+            padding: 0.3rem 0.85rem;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
         }
 
-        /* Table */
-        .table-wrapper {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
+        /* ─── TABLE ─── */
+        .table-wrap {
+            background: var(--surface);
+            border: 1px solid var(--border);
             border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
         }
 
-        thead {
-            background: #12122a;
-        }
+        colgroup .col-id   { width: 60px; }
+        colgroup .col-date { width: 160px; }
+
+        thead { background: var(--surface-2); }
 
         th {
-            padding: 1rem 1.2rem;
+            padding: 0.85rem 1.25rem;
             text-align: left;
-            font-size: 0.75rem;
+            font-size: 0.67rem;
+            font-weight: 500;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--text-muted);
-            font-weight: 600;
+            letter-spacing: 0.12em;
+            color: var(--text-dim);
         }
+
+        tbody tr {
+            border-top: 1px solid var(--border);
+            transition: background 0.15s;
+        }
+
+        tbody tr:hover { background: rgba(0,0,0,0.02); }
 
         td {
-            padding: 0.9rem 1.2rem;
-            border-top: 1px solid var(--card-border);
-            font-size: 0.95rem;
+            padding: 0.85rem 1.25rem;
+            font-size: 0.88rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 400;
         }
 
-        tr:hover {
-            background: rgba(255,255,255,0.02);
+        td.td-id   { color: var(--text-dim); font-family: 'Outfit', sans-serif; font-size: 0.8rem; }
+        td.td-temp { color: var(--orange); }
+        td.td-hum  { color: var(--blue); }
+        td.td-heat { color: var(--amber); }
+        td.td-date { color: var(--text-muted); font-size: 0.8rem; }
+
+        .chip {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.82rem;
         }
 
-        .temp-cell { color: var(--warm); font-weight: 600; }
-        .hum-cell { color: var(--cool); font-weight: 600; }
-        .heat-cell { color: #ff9f43; font-weight: 600; }
-        .date-cell { color: var(--text-muted); font-size: 0.85rem; }
+        .chip.temp { background: var(--orange-dim); }
+        .chip.hum  { background: var(--blue-dim); }
+        .chip.heat { background: var(--amber-dim); }
 
         .no-data {
+            padding: 3.5rem;
             text-align: center;
-            padding: 3rem;
             color: var(--text-muted);
+            font-size: 0.9rem;
         }
 
-        .no-data p { font-size: 1.1rem; }
+        .new-row {
+            animation: slideIn 0.4s ease;
+        }
 
-        @media (max-width: 600px) {
-            body { padding: 1rem; }
-            .latest-item .value { font-size: 1.6rem; }
-            th, td { padding: 0.7rem 0.8rem; }
-            .filter-bar { flex-direction: column; align-items: stretch; }
-            .filter-bar .count-badge { margin-left: 0; text-align: center; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 768px) {
+            .readings-grid { grid-template-columns: repeat(2, 1fr); }
+            .stats-row     { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 1.25rem 1rem 3rem; }
+            .site-header   { flex-direction: column; align-items: flex-start; gap: 1rem; }
+            .readings-grid { grid-template-columns: 1fr 1fr; }
+            .reading-card .r-value { font-size: 1.5rem; }
+            .filter-bar    { flex-direction: column; align-items: stretch; }
+            .count-badge   { margin-left: 0; text-align: center; }
+            th, td         { padding: 0.7rem 0.85rem; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Monitor Ambiental</h1>
+<div class="container">
 
-        {% if latest %}
-        <div class="latest-card">
-            <div class="latest-item">
-                <div class="label">Temperatura</div>
-                <div class="value temp">{{ latest.temperature|floatformat:1 }}°C</div>
-            </div>
-            <div class="latest-item">
-                <div class="label">Humedad</div>
-                <div class="value hum">{{ latest.humidity|floatformat:1 }}%</div>
-            </div>
-            <div class="latest-item">
-                <div class="label">Índice de Calor</div>
-                <div class="value heat">{{ latest.heat_index|floatformat:1 }}°C</div>
-            </div>
-            <div class="latest-item">
-                <div class="label">Última Lectura</div>
-                <div class="value time">{{ latest.date|date:"d/m/Y H:i" }}</div>
-            </div>
+    <!-- HEADER -->
+    <header class="site-header">
+        <div class="site-title">
+            <span class="eyebrow">Dashboard</span>
+            <h1>Monitor Ambiental</h1>
         </div>
-
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-title">Temperatura</div>
-                <div class="stat-row">
-                    <div class="stat-box">
-                        <span class="stat-label">Mín</span>
-                        <span class="stat-value min">{{ stats.min_temp|floatformat:1 }}°C</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Prom</span>
-                        <span class="stat-value avg">{{ stats.avg_temp|floatformat:1 }}°C</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Máx</span>
-                        <span class="stat-value max">{{ stats.max_temp|floatformat:1 }}°C</span>
-                    </div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-title">Humedad</div>
-                <div class="stat-row">
-                    <div class="stat-box">
-                        <span class="stat-label">Mín</span>
-                        <span class="stat-value min">{{ stats.min_hum|floatformat:1 }}%</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Prom</span>
-                        <span class="stat-value avg">{{ stats.avg_hum|floatformat:1 }}%</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Máx</span>
-                        <span class="stat-value max">{{ stats.max_hum|floatformat:1 }}%</span>
-                    </div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-title">Índice de Calor</div>
-                <div class="stat-row">
-                    <div class="stat-box">
-                        <span class="stat-label">Mín</span>
-                        <span class="stat-value min">{{ stats.min_hi|floatformat:1 }}°C</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Prom</span>
-                        <span class="stat-value avg">{{ stats.avg_hi|floatformat:1 }}°C</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Máx</span>
-                        <span class="stat-value max">{{ stats.max_hi|floatformat:1 }}°C</span>
-                    </div>
-                </div>
-            </div>
+        <div class="header-actions">
+            <span id="ws-status" style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--text-muted);">
+                <span class="live-dot"></span>En vivo
+            </span>
+            <a href="/temperature/api/semaphore/" class="btn-pill">Semáforo &#x2192;</a>
         </div>
-        {% endif %}
+    </header>
 
-        <div class="filter-bar">
-            <label for="hour-select">Filtrar por hora:</label>
-            <form method="get" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-                <select name="hour" id="hour-select">
-                    <option value="">Todas las horas</option>
-                    {% for h in hours_range %}
-                    <option value="{{ h }}" {% if selected_hour == h %}selected{% endif %}>{{ h }}:00</option>
-                    {% endfor %}
-                </select>
-                <button type="submit" class="btn">Filtrar</button>
-                {% if selected_hour is not None %}
-                <a href="." class="btn-clear">Limpiar filtro</a>
-                {% endif %}
-            </form>
-            <span class="count-badge">{{ count }} registro{{ count|pluralize:"s" }}</span>
+    {% if latest %}
+    <!-- LATEST READINGS -->
+    <div class="readings-grid">
+        <div class="reading-card temp">
+            <span class="r-label">Temperatura</span>
+            <span class="r-value" id="val-temp">{{ latest.temperature|floatformat:1 }}</span>
+            <span class="r-unit">°C</span>
         </div>
-
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Temperatura</th>
-                        <th>Humedad</th>
-                        <th>Índice de Calor</th>
-                        <th>Fecha</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% if readings %}
-                    {% for r in readings %}
-                    <tr>
-                        <td style="color:var(--text-muted);">{{ r.id }}</td>
-                        <td class="temp-cell">{{ r.temperature|floatformat:1 }}°C</td>
-                        <td class="hum-cell">{{ r.humidity|floatformat:1 }}%</td>
-                        <td class="heat-cell">{{ r.heat_index|floatformat:1 }}°C</td>
-                        <td class="date-cell">{{ r.date|date:"d/m/Y H:i:s" }}</td>
-                    </tr>
-                    {% endfor %}
-                    {% else %}
-                    <tr>
-                        <td colspan="5" class="no-data">
-                            <p>No hay registros disponibles</p>
-                        </td>
-                    </tr>
-                    {% endif %}
-                </tbody>
-            </table>
+        <div class="reading-card hum">
+            <span class="r-label">Humedad</span>
+            <span class="r-value" id="val-hum">{{ latest.humidity|floatformat:1 }}</span>
+            <span class="r-unit">%</span>
+        </div>
+        <div class="reading-card heat">
+            <span class="r-label">Índice de calor</span>
+            <span class="r-value" id="val-heat">{{ latest.heat_index|floatformat:1 }}</span>
+            <span class="r-unit">°C</span>
+        </div>
+        <div class="reading-card time">
+            <span class="r-label">Última lectura</span>
+            <span class="r-value" id="val-time">{{ latest.date|date:"H:i" }}</span>
+            <span class="r-unit" id="val-date">{{ latest.date|date:"d/m/Y" }}</span>
         </div>
     </div>
+
+    <!-- STATS -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-card-title">Temperatura</div>
+            <div class="stat-inner">
+                <div class="stat-item">
+                    <span class="s-label">Mín</span>
+                    <span class="s-val min" id="stat-min-temp">{{ stats.min_temp|floatformat:1 }}°</span>
+                </div>
+                <div class="stat-item">
+                    <span class="s-label">Prom</span>
+                    <span class="s-val avg" id="stat-avg-temp">{{ stats.avg_temp|floatformat:1 }}°</span>
+                </div>
+                <div class="stat-item">
+                    <span class="s-label">Máx</span>
+                    <span class="s-val max" id="stat-max-temp">{{ stats.max_temp|floatformat:1 }}°</span>
+                </div>
+            </div>
+            <div class="stat-bar-track"><div class="stat-bar-fill t" style="width:100%"></div></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-title">Humedad</div>
+            <div class="stat-inner">
+                <div class="stat-item">
+                    <span class="s-label">Mín</span>
+                    <span class="s-val min" id="stat-min-hum">{{ stats.min_hum|floatformat:1 }}%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="s-label">Prom</span>
+                    <span class="s-val avg" id="stat-avg-hum">{{ stats.avg_hum|floatformat:1 }}%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="s-label">Máx</span>
+                    <span class="s-val max" id="stat-max-hum">{{ stats.max_hum|floatformat:1 }}%</span>
+                </div>
+            </div>
+            <div class="stat-bar-track"><div class="stat-bar-fill h" style="width:100%"></div></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-title">Índice de calor</div>
+            <div class="stat-inner">
+                <div class="stat-item">
+                    <span class="s-label">Mín</span>
+                    <span class="s-val min" id="stat-min-hi">{{ stats.min_hi|floatformat:1 }}°</span>
+                </div>
+                <div class="stat-item">
+                    <span class="s-label">Prom</span>
+                    <span class="s-val avg" id="stat-avg-hi">{{ stats.avg_hi|floatformat:1 }}°</span>
+                </div>
+                <div class="stat-item">
+                    <span class="s-label">Máx</span>
+                    <span class="s-val max" id="stat-max-hi">{{ stats.max_hi|floatformat:1 }}°</span>
+                </div>
+            </div>
+            <div class="stat-bar-track"><div class="stat-bar-fill hi" style="width:100%"></div></div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- LINE CHART -->
+    <div class="chart-section">
+        <div class="chart-header">
+            <span class="ch-title">Evolución — Temperatura y Humedad</span>
+            <div class="chart-legend">
+                <div class="legend-item"><span class="legend-dot" style="background:var(--orange);"></span>Temperatura</div>
+                <div class="legend-item"><span class="legend-dot" style="background:var(--blue);"></span>Humedad</div>
+            </div>
+        </div>
+        <div class="chart-canvas-wrap">
+            <canvas id="envChart"></canvas>
+        </div>
+    </div>
+
+    <!-- CARTESIAN PLANE (Scatter) — Variance in real time -->
+    <div class="chart-section">
+        <div class="chart-header">
+            <span class="ch-title">Plano Cartesiano — Varianza en tiempo real</span>
+            <div class="chart-legend">
+                <div class="legend-item"><span class="legend-dot" style="background:rgba(3,105,161,0.45);"></span>Histórico</div>
+                <div class="legend-item"><span class="legend-dot" style="background:var(--orange);"></span>Lectura actual</div>
+            </div>
+        </div>
+        <div class="chart-canvas-wrap">
+            <canvas id="scatterChart"></canvas>
+        </div>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="filter-bar">
+        <label for="hour-select">Hora:</label>
+        <form method="get" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+            <select name="hour" id="hour-select">
+                <option value="">Todas las horas</option>
+                {% for h in hours_range %}
+                <option value="{{ h }}" {% if selected_hour == h %}selected{% endif %}>{{ h }}:00</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn-filter">Filtrar</button>
+            {% if selected_hour is not None %}
+            <a href="." class="btn-clear">Limpiar</a>
+            {% endif %}
+        </form>
+        <span class="count-badge" id="count-badge">{{ count }} registro{{ count|pluralize:"s" }}</span>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrap">
+        <table>
+            <colgroup>
+                <col class="col-id">
+                <col>
+                <col>
+                <col>
+                <col class="col-date">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Temperatura</th>
+                    <th>Humedad</th>
+                    <th>Índice de calor</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody id="readings-body">
+                {% if readings %}
+                {% for r in readings %}
+                <tr>
+                    <td class="td-id">{{ r.id }}</td>
+                    <td class="td-temp"><span class="chip temp">{{ r.temperature|floatformat:1 }}°C</span></td>
+                    <td class="td-hum"><span class="chip hum">{{ r.humidity|floatformat:1 }}%</span></td>
+                    <td class="td-heat"><span class="chip heat">{{ r.heat_index|floatformat:1 }}°C</span></td>
+                    <td class="td-date">{{ r.date|date:"d/m/Y H:i:s" }}</td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr id="no-data-row">
+                    <td colspan="5" class="no-data">No hay registros disponibles</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    // ─── INITIAL DATA ───
+    const labels   = JSON.parse('{{ chart_labels|safe }}');
+    const tempData = JSON.parse('{{ chart_temps|safe }}');
+    const humData  = JSON.parse('{{ chart_hums|safe }}');
+
+    // Scatter: build initial points from line data (they are aligned by index)
+    // We assume labels length = tempData length = humData length
+    const scatterPoints = tempData.map((t, i) => ({ x: t, y: humData[i] }));
+
+    const MAX_POINTS = 60;
+
+    const makeGradient = (ctx, color) => {
+        const g = ctx.createLinearGradient(0, 0, 0, 260);
+        g.addColorStop(0, color);
+        g.addColorStop(1, 'transparent');
+        return g;
+    };
+
+    // ─── LINE CHART ───
+    const ctxLine = document.getElementById('envChart').getContext('2d');
+    const envChart = new Chart(ctxLine, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Temperatura (°C)',
+                    data: tempData,
+                    borderColor: '#c2410c',
+                    backgroundColor: makeGradient(ctxLine, 'rgba(194,65,12,0.12)'),
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: '#c2410c',
+                    tension: 0.4,
+                    fill: true,
+                    yAxisID: 'yTemp',
+                },
+                {
+                    label: 'Humedad (%)',
+                    data: humData,
+                    borderColor: '#0369a1',
+                    backgroundColor: makeGradient(ctxLine, 'rgba(3,105,161,0.10)'),
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: '#0369a1',
+                    tension: 0.4,
+                    fill: true,
+                    yAxisID: 'yHum',
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#ffffff',
+                    borderColor: 'rgba(0,0,0,0.08)',
+                    borderWidth: 1,
+                    titleColor: '#1a1a1a',
+                    bodyColor: '#7c7a76',
+                    padding: 10,
+                    cornerRadius: 8,
+                    titleFont: { family: 'Outfit', size: 12 },
+                    bodyFont:  { family: 'JetBrains Mono', size: 12 },
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: '#a8a4a0',
+                        font: { family: 'JetBrains Mono', size: 11 },
+                        maxTicksLimit: 10,
+                        maxRotation: 0,
+                    },
+                    grid: { color: 'rgba(0,0,0,0.04)' },
+                    border: { color: 'rgba(0,0,0,0.08)' }
+                },
+                yTemp: {
+                    type: 'linear',
+                    position: 'left',
+                    ticks: { color: '#c2410c', font: { family: 'JetBrains Mono', size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.04)' },
+                    border: { color: 'rgba(0,0,0,0.08)', dash: [4,4] },
+                },
+                yHum: {
+                    type: 'linear',
+                    position: 'right',
+                    ticks: { color: '#0369a1', font: { family: 'JetBrains Mono', size: 11 } },
+                    grid: { drawOnChartArea: false },
+                    border: { color: 'rgba(0,0,0,0.08)' }
+                }
+            }
+        }
+    });
+
+    // ─── SCATTER CHART (Plano Cartesiano) ───
+    const ctxScatter = document.getElementById('scatterChart').getContext('2d');
+
+    // Split points: all but last = historic, last = current if exists
+    const historicPoints = scatterPoints.slice(0, -1);
+    const currentPoint   = scatterPoints.length ? [scatterPoints[scatterPoints.length - 1]] : [];
+
+    const scatterChart = new Chart(ctxScatter, {
+        type: 'scatter',
+        data: {
+            datasets: [
+                {
+                    label: 'Histórico',
+                    data: historicPoints,
+                    backgroundColor: 'rgba(3,105,161,0.35)',
+                    borderColor: 'transparent',
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                },
+                {
+                    label: 'Lectura actual',
+                    data: currentPoint,
+                    backgroundColor: '#c2410c',
+                    borderColor: '#fff',
+                    borderWidth: 2,
+                    pointRadius: 10,
+                    pointHoverRadius: 12,
+                    pointStyle: 'circle',
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeOutQuart' },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#ffffff',
+                    borderColor: 'rgba(0,0,0,0.08)',
+                    borderWidth: 1,
+                    titleColor: '#1a1a1a',
+                    bodyColor: '#7c7a76',
+                    padding: 10,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: (context) => {
+                            const p = context.raw;
+                            return `Temp: ${p.x}°C  ·  Hum: ${p.y}%`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    position: 'bottom',
+                    title: {
+                        display: true,
+                        text: 'Temperatura (°C)',
+                        color: '#7c7a76',
+                        font: { family: 'Outfit', size: 11, weight: 500 }
+                    },
+                    ticks: { color: '#a8a4a0', font: { family: 'JetBrains Mono', size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.04)' },
+                    border: { color: 'rgba(0,0,0,0.08)' }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Humedad (%)',
+                        color: '#7c7a76',
+                        font: { family: 'Outfit', size: 11, weight: 500 }
+                    },
+                    ticks: { color: '#a8a4a0', font: { family: 'JetBrains Mono', size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.04)' },
+                    border: { color: 'rgba(0,0,0,0.08)' }
+                }
+            }
+        }
+    });
+
+    // ─── REAL-TIME WEBSOCKET ───
+    const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsUrl = `${wsScheme}://${window.location.host}/ws/temperature/`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+        console.log('WS connected');
+        document.getElementById('ws-status').innerHTML = '<span class="live-dot"></span>En vivo';
+    };
+
+    ws.onclose = () => {
+        document.getElementById('ws-status').innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:#a8a4a0;display:inline-block;"></span>Desconectado';
+    };
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        const temp = parseFloat(data.temperature);
+        const hum  = parseFloat(data.humidity);
+        const hi   = data.heat_index ? parseFloat(data.heat_index) : 0.0;
+        const now  = new Date();
+        const timeStr = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+        const dateStr = now.toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' });
+        const isoStr  = now.toISOString();
+
+        // 1. Update latest readings
+        document.getElementById('val-temp').textContent = temp.toFixed(1);
+        document.getElementById('val-hum').textContent  = hum.toFixed(1);
+        document.getElementById('val-heat').textContent = hi.toFixed(1);
+        document.getElementById('val-time').textContent = timeStr;
+        document.getElementById('val-date').textContent = dateStr;
+
+        // 2. Update line chart
+        envChart.data.labels.push(timeStr);
+        envChart.data.datasets[0].data.push(temp);
+        envChart.data.datasets[1].data.push(hum);
+        if (envChart.data.labels.length > MAX_POINTS) {
+            envChart.data.labels.shift();
+            envChart.data.datasets[0].data.shift();
+            envChart.data.datasets[1].data.shift();
+        }
+        envChart.update('none');
+
+        // 3. Update scatter chart (Cartesian plane)
+        // Move previous current point to historic
+        const prevCurrent = scatterChart.data.datasets[1].data[0];
+        if (prevCurrent) {
+            scatterChart.data.datasets[0].data.push(prevCurrent);
+            if (scatterChart.data.datasets[0].data.length > MAX_POINTS) {
+                scatterChart.data.datasets[0].data.shift();
+            }
+        }
+        scatterChart.data.datasets[1].data = [{ x: temp, y: hum }];
+        scatterChart.update();
+
+        // 4. Prepend to table
+        const tbody = document.getElementById('readings-body');
+        const noData = document.getElementById('no-data-row');
+        if (noData) noData.remove();
+
+        const tr = document.createElement('tr');
+        tr.className = 'new-row';
+        tr.innerHTML = `
+            <td class="td-id">—</td>
+            <td class="td-temp"><span class="chip temp">${temp.toFixed(1)}°C</span></td>
+            <td class="td-hum"><span class="chip hum">${hum.toFixed(1)}%</span></td>
+            <td class="td-heat"><span class="chip heat">${hi.toFixed(1)}°C</span></td>
+            <td class="td-date">${dateStr} ${timeStr}:00</td>
+        `;
+        tbody.insertBefore(tr, tbody.firstChild);
+
+        // 5. Update count badge
+        const badge = document.getElementById('count-badge');
+        let count = parseInt(badge.textContent.replace(/\D/g, '')) || 0;
+        badge.textContent = (count + 1) + ' registros';
+
+        // 6. Update simple stats (min/max/avg on client side) – optional lightweight approximations
+        updateClientStats('temp', temp);
+        updateClientStats('hum', hum);
+        updateClientStats('hi', hi);
+    };
+
+    // Lightweight rolling stats for client-side display
+    const clientStats = { temp: [], hum: [], hi: [] };
+    function updateClientStats(key, value) {
+        clientStats[key].push(value);
+        if (clientStats[key].length > 100) clientStats[key].shift();
+        const vals = clientStats[key];
+        const min = Math.min(...vals);
+        const max = Math.max(...vals);
+        const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+        const suffix = key === 'hum' ? '%' : '°';
+        const elMin = document.getElementById('stat-min-'+key);
+        const elAvg = document.getElementById('stat-avg-'+key);
+        const elMax = document.getElementById('stat-max-'+key);
+        if (elMin) elMin.textContent = min.toFixed(1)+suffix;
+        if (elAvg) elAvg.textContent = avg.toFixed(1)+suffix;
+        if (elMax) elMax.textContent = max.toFixed(1)+suffix;
+    }
+
+    // Seed client stats from initial data so the first WS message doesn't reset everything
+    {% if chart_temps %}
+    JSON.parse('{{ chart_temps|safe }}').forEach(v => clientStats.temp.push(v));
+    JSON.parse('{{ chart_hums|safe }}').forEach(v => clientStats.hum.push(v));
+    {% endif %}
+</script>
 </body>
 </html>

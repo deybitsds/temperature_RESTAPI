@@ -1,3 +1,4 @@
+import json
 import traceback
 
 from django.db.models import Min, Max, Avg
@@ -139,42 +140,11 @@ class TemperatureViewSet(viewsets.ModelViewSet):
 
         hours_range = range(24)
 
-        context = {
-            'readings': readings,
-            'count': readings.count(),
-            'latest': latest,
-            'stats': stats,
-            'selected_hour': int(hour) if hour else None,
-            'hours_range': hours_range,
-        }
-        return render(request, 'temperature_show.html', context)
-
-    @action(detail=False, methods=['get'])
-    def show(self, request):
-        hour = request.GET.get('hour')
-
-        readings = Temperature.objects.all()
-
-        if hour:
-            readings = readings.filter(date__hour=hour)
-
-        readings = readings.order_by('-date')
-
-        latest = readings.first()
-
-        stats = readings.aggregate(
-            min_temp=Min('temperature'),
-            max_temp=Max('temperature'),
-            avg_temp=Avg('temperature'),
-            min_hum=Min('humidity'),
-            max_hum=Max('humidity'),
-            avg_hum=Avg('humidity'),
-            min_hi=Min('heat_index'),
-            max_hi=Max('heat_index'),
-            avg_hi=Avg('heat_index'),
-        )
-
-        hours_range = range(24)
+        # Prepare chart data for last 50 readings (oldest first)
+        chart_qs = readings.order_by('date')[:50]
+        chart_labels = [r.date.strftime('%H:%M') for r in chart_qs]
+        chart_temps = [r.temperature for r in chart_qs]
+        chart_hums = [r.humidity for r in chart_qs]
 
         context = {
             'readings': readings,
@@ -183,5 +153,8 @@ class TemperatureViewSet(viewsets.ModelViewSet):
             'stats': stats,
             'selected_hour': int(hour) if hour else None,
             'hours_range': hours_range,
+            'chart_labels': json.dumps(chart_labels),
+            'chart_temps': json.dumps(chart_temps),
+            'chart_hums': json.dumps(chart_hums),
         }
         return render(request, 'temperature_show.html', context)
