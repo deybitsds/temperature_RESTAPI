@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semáforo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0f0f1a;
+            --card: #1a1a2e;
+            --border: #2a2a4a;
+            --text: #e0e0f0;
+            --muted: #8888aa;
+            --off: #333;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            gap: 2rem;
+            padding: 2rem;
+        }
+        h1 { font-weight: 300; letter-spacing: 0.05em; color: var(--muted); }
+        .semaphore {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        .light {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: var(--off);
+            border: 4px solid #444;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .light.on-red {
+            background: #ff3333;
+            border-color: #ff6666;
+            box-shadow: 0 0 40px rgba(255, 51, 51, 0.6), inset 0 0 20px rgba(255, 100, 100, 0.4);
+        }
+        .light.on-yellow {
+            background: #ffcc00;
+            border-color: #ffe066;
+            box-shadow: 0 0 40px rgba(255, 204, 0, 0.6), inset 0 0 20px rgba(255, 230, 100, 0.4);
+        }
+        .light.on-green {
+            background: #33ff33;
+            border-color: #66ff66;
+            box-shadow: 0 0 40px rgba(51, 255, 51, 0.6), inset 0 0 20px rgba(100, 255, 100, 0.4);
+        }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn {
+            padding: 0.8rem 1.6rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .btn:active { transform: scale(0.95); }
+        .btn-red { background: #ff3333; color: #1a1a2e; }
+        .btn-yellow { background: #ffcc00; color: #1a1a2e; }
+        .btn-green { background: #33ff33; color: #1a1a2e; }
+        .btn-off { background: var(--border); color: var(--text); }
+        .status { color: var(--muted); font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <h1>Semáforo LED</h1>
+    <div class="semaphore">
+        <div class="light {% if state.red %}on-red{% endif %}"></div>
+        <div class="light {% if state.yellow %}on-yellow{% endif %}"></div>
+        <div class="light {% if state.green %}on-green{% endif %}"></div>
+    </div>
+    <div class="controls">
+        <button class="btn btn-red" onclick="setState('red')">Rojo</button>
+        <button class="btn btn-yellow" onclick="setState('yellow')">Amarillo</button>
+        <button class="btn btn-green" onclick="setState('green')">Verde</button>
+        <button class="btn btn-off" onclick="setState('off')">Apagar</button>
+    </div>
+    <div class="status" id="status"></div>
+
+    <script>
+        async function setState(color) {
+            const payload = { red: false, yellow: false, green: false };
+            if (color !== 'off') payload[color] = true;
+            const res = await fetch('/temperature/api/semaphore/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (res.ok) {
+                document.getElementById('status').textContent = 'Actualizado';
+                location.reload();
+            } else {
+                document.getElementById('status').textContent = 'Error: ' + JSON.stringify(data);
+            }
+        }
+    </script>
+</body>
+</html>
